@@ -28,7 +28,7 @@ jobs:
         env:
           SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
           SLACK_USERNAME: CyNotification
-          SLACK_ICON: https://image.cdn2.seaart.ai/2023-12-06/clo9g0h4msbc73ac2sog/99e1abc36f32945cd4bacf5ee7448e96194545f7_high.webp
+          SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
           SLACK_MESSAGE: 'Test Automation Report'
           SLACK_TITLE: Cypress Web Test
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}  
