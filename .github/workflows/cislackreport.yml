@@ -39,7 +39,7 @@ jobs:
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`%0A%0A✅ Pasaron: ${PASSED_TESTS}%0A❌ Fallaron: ${FAILED_TESTS}%0A⚪️ Saltados: ${SKIPPED_TESTS}%0A🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`%0A%0A✅ Pasaron: ${PASSED_TESTS}❌ Fallaron: ${FAILED_TESTS}⚪️ Saltados: ${SKIPPED_TESTS}🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: always()
