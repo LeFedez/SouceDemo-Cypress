@@ -14,14 +14,7 @@ jobs:
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
-        # Continúa la ejecución incluso si las pruebas fallan para poder enviar la notificación
-        continue-on-error: true
-        with:
-          # Inicia el servidor de la aplicación y espera a que esté listo
-          start: npm start
-          wait-on: 'http://localhost:3000' # Cambia el puerto si es necesario
-        id: cypress_tests
-
+        
       - name: Get Test Summary
         run: |
           echo "PASSED_TESTS=$(jq '.stats.passes' cypress-results.json)" >> $GITHUB_ENV
