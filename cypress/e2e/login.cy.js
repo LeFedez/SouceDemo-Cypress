@@ -19,7 +19,7 @@ describe('Inicia sesion Souce Demo', () => {
 
         //Login 
         cy.get('[data-test="username"]').type("standard")
-        cy.get('[data-test="password"]').type("secret_sauce")
+        cy.get('[data-test="password"]').type("1234")
         cy.get('#login-button').click()
         
     });
