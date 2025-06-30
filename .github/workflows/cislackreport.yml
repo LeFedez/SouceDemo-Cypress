@@ -1,52 +1,78 @@
-name: Test Ejecution
-on: push
+name: Cypress Tests and Slack Notification
+
+on:
+  push:
+    branches:
+      - main # O la rama que desees monitorear
+
 jobs:
   cypress-run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-        
-      # Install npm dependencies, cache them correctly
-      # and run all Cypress tests
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Cypress run
-        uses: cypress-io/github-action@v5
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        # Continúa la ejecución incluso si las pruebas fallan para poder enviar la notificación
+        continue-on-error: true
         with:
-         command: npx cypress run  
+          # Inicia el servidor de la aplicación y espera a que esté listo
+          start: npm start
+          wait-on: 'http://localhost:3000' # Cambia el puerto si es necesario
+        id: cypress_tests
 
-      - name: Cypress Test Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Mochawesome HTML Report
-          path: cypress/reports/html   
-
-      - name: Slack Notification
-        if: always()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
-          SLACK_USERNAME: CyNotification
-          SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
-          SLACK_MESSAGE: 'msg="📊 E2E Results on branch: $branch_name\n\n• Total: $total\n• Passed: $passed\n• Failed: $failed\n• Pending: $pending\n•Skipped: $skipped" '
-          SLACK_TITLE: Cypress Web Test
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-      - name: Cypress Test Report
-        if: always()
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+      - name: Get Test Summary
         run: |
-          report="results.json"
-          total=$(jq '.totals.tests' $report)
-          failed=$(jq '.totals.failed' $report)
-          passed=$(jq '.totals.passed' $report)
-          pending=$(jq '.totals.pending' $report)
-          skipped=$(jq '.totals.skipped' $report)
-          branch_name=$(echo "${GITHUB_REF#refs/heads/}")
-          msg="📊 E2E Results on branch: $branch_name\n\n• Total: $total\n• Passed: $passed\n• Failed: $failed\n• Pending: $pending\n•Skipped: $skipped"
-          curl -X POST -H 'Content-type: application/json' \
-            --data "{\"channel\":\"soucedemo-cypress\",\"text\":\"$msg\"}" \
-            https://slack.com/api/chat.postMessage \
-            -H "Authorization: Bearer $SLACK_WEBHOOK"
+          echo "PASSED_TESTS=$(jq '.stats.passes' cypress-results.json)" >> $GITHUB_ENV
+          echo "FAILED_TESTS=$(jq '.stats.failures' cypress-results.json)" >> $GITHUB_ENV
+          echo "SKIPPED_TESTS=$(jq '.stats.skipped' cypress-results.json)" >> $GITHUB_ENV
+        # Se ejecuta solo si el paso anterior (pruebas) ha finalizado, sin importar si falló o no
+        if: always()
+        # Asumiendo que cypress-json-reporter está configurado para generar cypress-results.json
+
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.24.0
+        # Se ejecuta siempre para notificar el resultado
+        if: always()
+        with:
+          # El payload personalizado para Slack
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Resultados de Pruebas de Cypress* para el commit <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha.slice(0,7) }}> en la rama `${{ github.ref_name }}`"
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    { "type": "mrkdwn", "text": "✅ *Pasaron:*\n`${{ env.PASSED_TESTS }}`" },
+                    { "type": "mrkdwn", "text": "❌ *Fallaron:*\n`${{ env.FAILED_TESTS }}`" },
+                    { "type": "mrkdwn", "text": "⚪️ *Saltados:*\n`${{ env.SKIPPED_TESTS }}`" }
+                  ]
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Ver resultados del Workflow"
+                      },
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                }
+              ]
+            }
+        env:
+          # Usa el secreto que creaste anteriormente
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
