@@ -39,8 +39,7 @@ jobs:
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "{}" > slack-payload.json
-          jq \
+          SLACK_MESSAGE=$(jq -n \
             --arg sha "${{ github.sha }}" \
             --arg shortsha "$SHORT_SHA" \
             --arg repo "${{ github.repository }}" \
@@ -52,6 +51,7 @@ jobs:
             --arg runurl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '
             {
+              text: "Resumen de resultados de pruebas Cypress",
               blocks: [
                 {
                   type: "section",
@@ -80,13 +80,15 @@ jobs:
                   ]
                 }
               ]
-            }
-            ' > slack-payload.json
+            }')
+          echo "SLACK_MESSAGE<<EOF" >> $GITHUB_ENV
+          echo "$SLACK_MESSAGE" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload-file-path: ./slack-payload.json
+          payload: ${{ env.SLACK_MESSAGE }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
