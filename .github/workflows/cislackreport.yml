@@ -39,53 +39,54 @@ jobs:
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          SLACK_MESSAGE=$(cat <<EOF
-{
-  "blocks": [
-    {
-      "type": "section",
-      "text": {
-        "type": "mrkdwn",
-        "text": "*Resultados de Pruebas Cypress* para el commit <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${SHORT_SHA}> en la rama \`${{ github.ref_name }}\`"
-      }
-    },
-    { "type": "divider" },
-    {
-      "type": "section",
-      "fields": [
-        { "type": "mrkdwn", "text": "✅ *Pasaron:*\n${PASSED_TESTS}" },
-        { "type": "mrkdwn", "text": "❌ *Fallaron:*\n${FAILED_TESTS}" },
-        { "type": "mrkdwn", "text": "⚪️ *Saltados:*\n${SKIPPED_TESTS}" }
-      ]
-    },
-    {
-      "type": "actions",
-      "elements": [
-        {
-          "type": "button",
-          "text": {
-            "type": "plain_text",
-            "text": "Ver resultados del Workflow"
-          },
-          "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-        }
-      ]
-    }
-  ]
-}
-EOF
-)
-          echo "SLACK_MESSAGE<<EOF" >> $GITHUB_ENV
-          echo "$SLACK_MESSAGE" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          echo "{}" > slack-payload.json
+          jq \
+            --arg sha "${{ github.sha }}" \
+            --arg shortsha "$SHORT_SHA" \
+            --arg repo "${{ github.repository }}" \
+            --arg url "${{ github.server_url }}" \
+            --arg ref "${{ github.ref_name }}" \
+            --arg passed "${PASSED_TESTS}" \
+            --arg failed "${FAILED_TESTS}" \
+            --arg skipped "${SKIPPED_TESTS}" \
+            --arg runurl "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '
+            {
+              blocks: [
+                {
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "*Resultados de Pruebas Cypress* para el commit <\($url)/\($repo)/commit/\($sha)|\($shortsha)> en la rama `\($ref)`"
+                  }
+                },
+                { type: "divider" },
+                {
+                  type: "section",
+                  fields: [
+                    { type: "mrkdwn", text: "✅ *Pasaron:*\n\($passed)" },
+                    { type: "mrkdwn", text: "❌ *Fallaron:*\n\($failed)" },
+                    { type: "mrkdwn", text: "⚪️ *Saltados:*\n\($skipped)" }
+                  ]
+                },
+                {
+                  type: "actions",
+                  elements: [
+                    {
+                      type: "button",
+                      text: { type: "plain_text", text: "Ver resultados del Workflow" },
+                      url: $runurl
+                    }
+                  ]
+                }
+              ]
+            }
+            ' > slack-payload.json
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: ${{ env.SLACK_MESSAGE }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
+          payload-file-path: ./slack-payload.json
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
