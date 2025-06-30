@@ -47,6 +47,14 @@ jobs:
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |
-            { "text": "${{ env.SLACK_MESSAGE }}" }
+           {
+              "attachments": [
+                {
+                  "color": "${{ steps.summary.outputs.failed != '0' && '#ff4d4f' || '#36a64f' }}",
+                  { "text": "${{ env.SLACK_MESSAGE }}" }
+                }
+              ]
+            }
+            
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

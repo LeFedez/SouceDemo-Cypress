@@ -5,7 +5,7 @@ module.exports = defineConfig({
   video: true,
   screenshotsFolder: 'images',
   reporterOptions: {
-    videoOnFailOnly: true
+    videoOnFailOnly: false
   },
   e2e: {
     setupNodeEvents(on, config) {
