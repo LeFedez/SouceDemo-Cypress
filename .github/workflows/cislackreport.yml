@@ -64,6 +64,7 @@ jobs:
             {
               "attachments": [
                 {
+                  "fallback": "Resultados de Pruebas Cypress",
                   "color": "${{ env.SLACK_COLOR }}",
                   "text": "${{ env.SLACK_MESSAGE }}"
                 }
