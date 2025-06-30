@@ -29,7 +29,7 @@ jobs:
           SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
           SLACK_USERNAME: CyNotification
           SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
-          SLACK_MESSAGE: 'Test Automation Report'
+          SLACK_MESSAGE: 'msg="📊 E2E Results on branch: $branch_name\n\n• Total: $total\n• Passed: $passed\n• Failed: $failed\n• Pending: $pending\n•Skipped: $skipped" '
           SLACK_TITLE: Cypress Web Test
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
@@ -47,6 +47,6 @@ jobs:
           branch_name=$(echo "${GITHUB_REF#refs/heads/}")
           msg="📊 E2E Results on branch: $branch_name\n\n• Total: $total\n• Passed: $passed\n• Failed: $failed\n• Pending: $pending\n•Skipped: $skipped"
           curl -X POST -H 'Content-type: application/json' \
-            --data "{\"channel\":\"notificaciones-remuneraciones-peru\",\"text\":\"$msg\"}" \
+            --data "{\"channel\":\"soucedemo-cypress\",\"text\":\"$msg\"}" \
             https://slack.com/api/chat.postMessage \
             -H "Authorization: Bearer $SLACK_WEBHOOK"
