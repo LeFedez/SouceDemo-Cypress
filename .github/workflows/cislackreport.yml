@@ -51,7 +51,7 @@ jobs:
               "attachments": [
                 {
                   "color": "${{ steps.summary.outputs.failed != '0' && '#ff4d4f' || '#36a64f' }}",
-                  { "text": "${{ env.SLACK_MESSAGE }}" }
+                  "text": "${{ env.SLACK_MESSAGE }}" 
                 }
               ]
             }
