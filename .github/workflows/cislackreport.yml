@@ -8,6 +8,7 @@ on:
 jobs:
   cypress-run:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -34,45 +35,57 @@ jobs:
           echo "FAILED_TESTS=$(jq '.stats.failures' $RESULTS_FILE)" >> $GITHUB_ENV
           echo "SKIPPED_TESTS=$(jq '.stats.skipped' $RESULTS_FILE)" >> $GITHUB_ENV
 
-      - name: Notify Slack with test summary
+      - name: Compose Slack message
+        if: always()
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          SLACK_MESSAGE=$(cat <<EOF
+{
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "*Resultados de Pruebas Cypress* para el commit <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${SHORT_SHA}> en la rama \`${{ github.ref_name }}\`"
+      }
+    },
+    { "type": "divider" },
+    {
+      "type": "section",
+      "fields": [
+        { "type": "mrkdwn", "text": "✅ *Pasaron:*\n${PASSED_TESTS}" },
+        { "type": "mrkdwn", "text": "❌ *Fallaron:*\n${FAILED_TESTS}" },
+        { "type": "mrkdwn", "text": "⚪️ *Saltados:*\n${SKIPPED_TESTS}" }
+      ]
+    },
+    {
+      "type": "actions",
+      "elements": [
+        {
+          "type": "button",
+          "text": {
+            "type": "plain_text",
+            "text": "Ver resultados del Workflow"
+          },
+          "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+        }
+      ]
+    }
+  ]
+}
+EOF
+)
+          echo "SLACK_MESSAGE<<EOF" >> $GITHUB_ENV
+          echo "$SLACK_MESSAGE" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: |
-            {
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Resultados de Pruebas Cypress* para el commit <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}"> en la rama `${{ github.ref_name }}`"
-                  }
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "section",
-                  "fields": [
-                    { "type": "mrkdwn", "text": "✅ *Pasaron:*\n`${{ env.PASSED_TESTS }}`" },
-                    { "type": "mrkdwn", "text": "❌ *Fallaron:*\n`${{ env.FAILED_TESTS }}`" },
-                    { "type": "mrkdwn", "text": "⚪️ *Saltados:*\n`${{ env.SKIPPED_TESTS }}`" }
-                  ]
-                },
-                {
-                  "type": "actions",
-                  "elements": [
-                    {
-                      "type": "button",
-                      "text": {
-                        "type": "plain_text",
-                        "text": "Ver resultados del Workflow"
-                      },
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                    }
-                  ]
-                }
-              ]
-            }
+          payload: ${{ env.SLACK_MESSAGE }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
