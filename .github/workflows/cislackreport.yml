@@ -14,7 +14,7 @@ jobs:
 
       - name: Run Cypress tests
         uses: cypress-io/github-action@v6
-        
+
       - name: Get Test Summary
         run: |
           echo "PASSED_TESTS=$(jq '.stats.passes' cypress-results.json)" >> $GITHUB_ENV
@@ -37,7 +37,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "*Resultados de Pruebas de Cypress* para el commit <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha.slice(0,7) }}> en la rama `${{ github.ref_name }}`"
+                    "text": "*Resultados de Pruebas de Cypress* para el commit <${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha.slice }}> en la rama `${{ github.ref_name }}`"
                   }
                 },
                 {
