@@ -1,15 +1,16 @@
-const { defineConfig } = require('cypress');
+const { defineConfig } = require("cypress");
 
 module.exports = defineConfig({
+  reporter: 'cypress-mochawesome-reporter',
+  video: true,
+  screenshotsFolder: 'images',
+  reporterOptions: {
+    videoOnFailOnly: true
+  },
   e2e: {
     setupNodeEvents(on, config) {
-      // implement node event listeners here
+      require('cypress-mochawesome-reporter/plugin')(on);
     },
-    // Habilita el reporter
-    reporter: 'cypress-json-reporter',
-    reporterOptions: {
-      // El nombre del archivo de salida
-      jsonFile: 'cypress-results.json'
-    },
+    baseUrl : 'https://www.saucedemo.com/v1/',
   },
 });
