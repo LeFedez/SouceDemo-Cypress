@@ -100,7 +100,7 @@ jobs:
             *Commit:* `${{ env.short_sha }}` por *${{ env.user_commit_username }}*
             *Mensaje Commit:* ${{ env.last_commit_message }}
             
-            *📊 Totales:* ${{ env.total_tests }}
+            *\n📊 Totales:* ${{ env.total_tests }}
             *✅ Pasadas:* ${{ env.passed_tests }}
             *❌ Fallidas:* ${{ env.failed_tests }}
             *⚪️ Saltadas:* ${{ env.skipped_tests }}
