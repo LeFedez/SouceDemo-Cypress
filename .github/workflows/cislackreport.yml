@@ -1,4 +1,5 @@
 name: Cypress Tests and Slack Notification
+
 on:
   push:
     branches:
@@ -26,13 +27,6 @@ jobs:
                           --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true
         continue-on-error: true
 
-      - name: Upload Mochawesome HTML Report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mochawesome-report
-          path: cypress/results/mochawesome.html
-
       - name: Extract test summary
         if: always()
         run: |
@@ -41,21 +35,29 @@ jobs:
           echo "FAILED_TESTS=$(jq '.stats.failures' $RESULTS_FILE)" >> $GITHUB_ENV
           echo "SKIPPED_TESTS=$(jq '.stats.skipped' $RESULTS_FILE)" >> $GITHUB_ENV
           echo "TOTAL_TESTS=$(jq '.stats.tests' $RESULTS_FILE)" >> $GITHUB_ENV
+          
 
       - name: Compose Slack message
         if: always()
         run: |
-          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \${{ github.ref_name }}\\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n/artifacts|Descargar reporte Mochawesome HTML>\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \${{ github.ref_name }}\\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |
-          
-            { "text": "${{ env.SLACK_MESSAGE }}" }
+           {
+              "attachments": [
+                {
+                  "color": "${{ steps.summary.outputs.failed != '0' && '#ff4d4f' || '#36a64f' }}",
+                  "text": "${{ env.SLACK_MESSAGE }}" 
+                }
+              ]
+            }
+            
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-
 
 
