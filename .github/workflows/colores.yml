@@ -34,7 +34,7 @@ jobs:
         if: always()
         id: extract_summary_data
         run: |
-          RESULTS_FILE="cypress/results/mochawesome.json"
+          RESULTS_FILE="cypress/results/mochawesome.json" # Asegúrate de que esta ruta es correcta para tu setup de Mochawesome
           
           # Verificar si el archivo de reporte existe
           if [ ! -f "$RESULTS_FILE" ]; then
@@ -56,9 +56,11 @@ jobs:
           if [ "${{ env.failed_tests }}" -gt 0 ]; then
             echo "slack_notification_color=danger" >> "$GITHUB_ENV" # 'danger' para rojo
             echo "slack_status_emoji=🔴" >> "$GITHUB_ENV"
+            echo "slack_status_text=FALLA EN LAS PRUEBAS" >> "$GITHUB_ENV"
           else
             echo "slack_notification_color=good" >> "$GITHUB_ENV" # 'good' para verde
             echo "slack_status_emoji=✅" >> "$GITHUB_ENV"
+            echo "slack_status_text=PRUEBAS EXITOSAS" >> "$GITHUB_ENV"
           fi
 
           # Prepara el texto de duración
@@ -86,25 +88,26 @@ jobs:
 
       - name: Send Slack Notification with RtCamp Action
         if: always()
-        uses: rtCamp/action-slack-notify@v2 # ¡Usamos esta acción para simplificar!
+        uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }} # Asegúrate que este secreto contenga el Webhook URL
-          SLACK_USERNAME: 'Cypress CI Report' # Nombre del bot en Slack
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_USERNAME: 'Cypress CI Report'
           SLACK_CHANNEL: '#tu-canal-de-slack' # <<--- ¡IMPORTANTE! Reemplaza con tu canal de Slack.
-          SLACK_COLOR: ${{ env.slack_notification_color }} # Usamos la variable calculada
-          SLACK_TITLE: "${{ env.slack_status_emoji }} Resultado de Pruebas Cypress"
-          SLACK_MESSAGE: | # Un mensaje multi-línea fácil de leer
-            *Workflow:* <${{ env.action_run_url }}|${{ github.workflow }}>
-            *Repositorio:* <${{ env.repo_base_url }}|${{ github.repository }}>
-            *Rama:* `${{ env.branch_name }}`
-            *Commit:* `${{ env.short_sha }}` por *${{ env.user_commit_username }}*
-            *Mensaje Commit:* ${{ env.last_commit_message }}
+          SLACK_COLOR: ${{ env.slack_notification_color }}
+          SLACK_TITLE: "${{ env.slack_status_emoji }} ${{ env.slack_status_text }}" # Título más conciso
+          SLACK_MESSAGE: | # Un mensaje multi-línea fácil de leer con saltos de línea explícitos
+            *Resultados de Pruebas Cypress* para el commit `<${{ env.repo_base_url }}/commit/${{ github.sha }}|${{ env.short_sha }}>` en la rama `${{ env.branch_name }}`
             
-            *\n📊 Totales:* ${{ env.total_tests }}
+            *📊 Total:* ${{ env.total_tests }}
             *✅ Pasadas:* ${{ env.passed_tests }}
             *❌ Fallidas:* ${{ env.failed_tests }}
             *⚪️ Saltadas:* ${{ env.skipped_tests }}
             *⏱️ Duración:* ${{ env.duration_display }}
+            
+            *Workflow:* <${{ env.action_run_url }}|Ver ejecución en GitHub>
+            *Repositorio:* <${{ env.repo_base_url }}|${{ github.repository }}>
+            *Último Commit por:* ${{ env.user_commit_username }}
+            *Mensaje Commit:* ${{ env.last_commit_message }}
           SLACK_FOOTER: 'Powered by GitHub Actions'
           SLACK_ICON_EMOJI: ':cypress:' # Opcional, si tienes un emoji de Cypress
 
