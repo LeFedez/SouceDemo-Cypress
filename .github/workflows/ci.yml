@@ -61,7 +61,9 @@ jobs:
           SLACK_MESSAGE: | # Multi-line block for desired formatting
             *Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}>` en la rama `${{ github.ref_name }}`
             
+            
             📊 Total: ${{ env.TOTAL_TESTS }} | ✅ Passed: ${{ env.PASSED_TESTS }} | ❌ Failed: ${{ env.FAILED_TESTS }} | ⚪️ Skipped: ${{ env.SKIPPED_TESTS }}
+            
             🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Cypress Web Test
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
