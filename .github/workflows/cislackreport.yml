@@ -45,23 +45,12 @@ jobs:
 
       - name: Compose Slack message
         if: always()
+        id: compose-msg
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          echo "*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`" > slack_message.txt
-          echo "📊 Total: ${TOTAL_TESTS}" >> slack_message.txt
-          echo "✅ Pasaron: ${PASSED_TESTS}" >> slack_message.txt
-          echo "❌ Fallaron: ${FAILED_TESTS}" >> slack_message.txt
-          echo "⚪️ Saltados: ${SKIPPED_TESTS}" >> slack_message.txt
-          echo "📎 Reporte HTML (ver adjunto en 'Artifacts')" >> slack_message.txt
-          echo "🔗 [Ver workflow](${WORKFLOW_URL})" >> slack_message.txt
-
-      - name: Load Slack message into output
-        id: slack-msg
-        run: |
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          cat slack_message.txt >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          MESSAGE=$(echo -e "*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`\n📊 Total: ${TOTAL_TESTS}\n✅ Pasaron: ${PASSED_TESTS}\n❌ Fallaron: ${FAILED_TESTS}\n⚪️ Saltados: ${SKIPPED_TESTS}\n📎 Reporte HTML: Ver sección *Artifacts* en el workflow\n🔗 Ver workflow: ${WORKFLOW_URL}")
+          echo "message=$MESSAGE" >> $GITHUB_OUTPUT
 
       - name: Send Slack Notification
         if: always()
@@ -69,7 +58,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "${{ steps.slack-msg.outputs.message }}"
+              "text": "${{ steps.compose-msg.outputs.message }}"
             }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
