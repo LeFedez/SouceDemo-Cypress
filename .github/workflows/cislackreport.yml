@@ -41,7 +41,7 @@ jobs:
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \${{ github.ref_name }}\\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "SLACK_MESSAGE =*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \${{ github.ref_name }}\\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: always()
@@ -49,12 +49,8 @@ jobs:
         with:
           payload: |
            {
-              "attachments": [
-                {
-                  "color": "${{ steps.summary.outputs.failed != '0' && '#ff4d4f' || '#36a64f' }}",
-                  "text": "${{ env.SLACK_MESSAGE }}" 
-                }
-              ]
+            "text": "${{ env.SLACK_MESSAGE }}" 
+                
             }
             
         env:
