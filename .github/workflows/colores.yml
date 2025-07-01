@@ -22,69 +22,64 @@ jobs:
         run: npm ci
 
       - name: Run Cypress tests with Mochawesome
-        run: |
-          npx cypress run --reporter mochawesome \
-                          --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
-        continue-on-error: true
-
-      - name: Upload Mochawesome HTML Report
-        if: always()
-        uses: actions/upload-artifact@v4
+        # Usando la acción de Cypress para una mejor integración y manejo de caché
+        uses: cypress-io/github-action@v6
         with:
-          name: mochawesome-report
-          path: cypress/results/mochawesome.html
+          install-command: 'npm ci'
+          command: 'npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true'
+        continue-on-error: true # Mantener para asegurar que los pasos de notificación siempre se ejecuten
 
       - name: Extract test summary
-        id: test-summary
         if: always()
         run: |
           RESULTS_FILE="cypress/results/mochawesome.json"
-          echo "passed=$(jq '.stats.passes' $RESULTS_FILE)" >> $GITHUB_OUTPUT
-          echo "failed=$(jq '.stats.failures' $RESULTS_FILE)" >> $GITHUB_OUTPUT
-          echo "skipped=$(jq '.stats.skipped' $RESULTS_FILE)" >> $GITHUB_OUTPUT
-          echo "total=$(jq '.stats.tests' $RESULTS_FILE)" >> $GITHUB_OUTPUT
+          if [ -f "$RESULTS_FILE" ]; then
+            echo "PASSED_TESTS=$(jq '.stats.passes' $RESULTS_FILE)" >> $GITHUB_ENV
+            echo "FAILED_TESTS=$(jq '.stats.failures' $RESULTS_FILE)" >> $GITHUB_ENV
+            echo "SKIPPED_TESTS=$(jq '.stats.skipped' $RESULTS_FILE)" >> $GITHUB_ENV
+            echo "TOTAL_TESTS=$(jq '.stats.tests' $RESULTS_FILE)" >> $GITHUB_ENV
+          else
+            echo "No mochawesome.json found. Setting default values."
+            echo "PASSED_TESTS=0" >> $GITHUB_ENV
+            echo "FAILED_TESTS=0" >> $GITHUB_ENV
+            echo "SKIPPED_TESTS=0" >> $GITHUB_ENV
+            echo "TOTAL_TESTS=0" >> $GITHUB_ENV
+          fi
 
       - name: Compose Slack message
-        id: slack-msg
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-
-          # Determinar color del mensaje
-          COLOR="#36a64f"
-          if [ "${{ steps.test-summary.outputs.failed }}" -gt 0 ]; then
-            COLOR="#ff4d4f"
+          
+          # Determinar el emoji y estado basado en si hay fallas
+          if [ "${{ env.FAILED_TESTS }}" -gt 0 ]; then
+            STATUS_EMOJI=":red_circle:"
+            TEST_STATUS="FALLIDAS"
+          else
+            STATUS_EMOJI=":green_circle:"
+            TEST_STATUS="EXITOSAS"
           fi
 
-          # Construir mensaje
-          MSG="*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`"
-          MSG="$MSG\n📊 Total: ${{ steps.test-summary.outputs.total }}"
-          MSG="$MSG\n✅ Passed: ${{ steps.test-summary.outputs.passed }}"
-          MSG="$MSG\n❌ Failed: ${{ steps.test-summary.outputs.failed }}"
-          MSG="$MSG\n⚪️ Skipped: ${{ steps.test-summary.outputs.skipped }}"
-          MSG="$MSG\n📎 Reporte: (descargar desde _Artifacts_)"
-          MSG="$MSG\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          # Escapar saltos de línea
-          MSG_ESCAPED=$(echo "$MSG" | sed ':a;N;$!ba;s/\n/\\n/g')
-
-          echo "payload=$(jq -n \
-            --arg color "$COLOR" \
-            --arg msg "$MSG_ESCAPED" \
-            '{
-              attachments: [
-                {
-                  fallback: "Resultados de Pruebas Cypress",
-                  color: $color,
-                  text: $msg
-                }
-              ]
-            }')" >> $GITHUB_OUTPUT
+          echo "SLACK_MESSAGE=$STATUS_EMOJI *Resultados de Pruebas Cypress ($TEST_STATUS)* para el commit \`${SHORT_SHA}\` en la rama \`${{ github.ref_name }}\`\n📊 Total: ${{ env.TOTAL_TESTS }}\n✅ Passed: ${{ env.PASSED_TESTS }}\n❌ Failed: ${{ env.FAILED_TESTS }}\n⚪️ Skipped: ${{ env.SKIPPED_TESTS }}\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: ${{ steps.slack-msg.outputs.payload }}
+          payload: |
+            {
+              "text": "${{ env.SLACK_MESSAGE }}"
+            }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL_COLOR: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }}
+
+      - name: Upload Cypress artifacts
+        if: always() # Sube los artefactos siempre, o puedes cambiar a if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-results
+          path: |
+            cypress/videos/
+            cypress/screenshots/
+            cypress/results/mochawesome.json
+          retention-days: 5 # O el número de días que quieras retener los artefactos
