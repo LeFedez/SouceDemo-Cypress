@@ -47,14 +47,25 @@ jobs:
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
-          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n/artifacts|Descargar reporte Mochawesome HTML>\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          echo "SLACK_COLOR=#36a64f" >> $GITHUB_ENV
+          if [ "$FAILED_TESTS" -gt 0 ]; then
+            echo "SLACK_COLOR=#ff4d4f" >> $GITHUB_ENV
+          fi
+          echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|🔗 Ver Workflow o Descargar Reporte HTML>" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
           payload: |
-          
-            { "text": "${{ env.SLACK_MESSAGE }}" }
+            {
+              "attachments": [
+                {
+                  "fallback": "Resultados de Pruebas Cypress",
+                  "color": "${{ env.SLACK_COLOR }}",
+                  "text": "${{ env.SLACK_MESSAGE }}"
+                }
+              ]
+            }
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
