@@ -27,7 +27,7 @@ jobs:
         with:
           install-command: 'npm ci'
           command: 'npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true'
-        continue-on-error: true # Mantener para asegurar que los pasos de notificación siempre se ejecuten
+        continue-on-error: true # Mantenemos esto para que los pasos de notificación siempre se ejecuten
 
       - name: Extract test summary
         if: always()
@@ -37,7 +37,7 @@ jobs:
             echo "PASSED_TESTS=$(jq '.stats.passes' $RESULTS_FILE)" >> $GITHUB_ENV
             echo "FAILED_TESTS=$(jq '.stats.failures' $RESULTS_FILE)" >> $GITHUB_ENV
             echo "SKIPPED_TESTS=$(jq '.stats.skipped' $RESULTS_FILE)" >> $GITHUB_ENV
-            echo "TOTAL_TESTS=$(jq '.stats.tests' $RESULTS_FILE)" >> $GITHUB_ENV
+            echo "TOTAL_TESTS=$(jq '.stats.tests' $RESULTS_ENV)" >> $GITHUB_ENV
           else
             echo "No mochawesome.json found. Setting default values."
             echo "PASSED_TESTS=0" >> $GITHUB_ENV
@@ -46,32 +46,89 @@ jobs:
             echo "TOTAL_TESTS=0" >> $GITHUB_ENV
           fi
 
-      - name: Compose Slack message
+      - name: Prepare Slack Attachment Payload
         if: always()
+        id: prepare_slack_payload # Añadimos un ID para usar sus outputs
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           
-          # Determinar el emoji y estado basado en si hay fallas
+          ATTACHMENT_COLOR=""
+          STATUS_TEXT=""
           if [ "${{ env.FAILED_TESTS }}" -gt 0 ]; then
-            STATUS_EMOJI=":red_circle:"
-            TEST_STATUS="FALLIDAS"
+            ATTACHMENT_COLOR="#FF0000" # Rojo para fallas
+            STATUS_TEXT="🔴 *FALLA EN LAS PRUEBAS* 🔴"
           else
-            STATUS_EMOJI=":green_circle:"
-            TEST_STATUS="EXITOSAS"
+            ATTACHMENT_COLOR="#008000" # Verde para éxito
+            STATUS_TEXT="✅ *PRUEBAS EXITOSAS* ✅"
           fi
 
-          echo "SLACK_MESSAGE=$STATUS_EMOJI *Resultados de Pruebas Cypress ($TEST_STATUS)* para el commit \`${SHORT_SHA}\` en la rama \`${{ github.ref_name }}\`\n📊 Total: ${{ env.TOTAL_TESTS }}\n✅ Passed: ${{ env.PASSED_TESTS }}\n❌ Failed: ${{ env.FAILED_TESTS }}\n⚪️ Skipped: ${{ env.SKIPPED_TESTS }}\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
+          # Construimos el JSON del payload con un 'attachment'
+          PAYLOAD_JSON=$(cat <<EOF
+          {
+            "attachments": [
+              {
+                "color": "$ATTACHMENT_COLOR",
+                "blocks": [
+                  {
+                    "type": "section",
+                    "text": {
+                      "type": "mrkdwn",
+                      "text": "$STATUS_TEXT\n*Resultados de Pruebas Cypress* para el commit \`<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${SHORT_SHA}>\` en la rama \`${{ github.ref_name }}\`"
+                    }
+                  },
+                  {
+                    "type": "section",
+                    "fields": [
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Total:*\n${{ env.TOTAL_TESTS }}"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Passed:*\n${{ env.PASSED_TESTS }}"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Failed:*\n${{ env.FAILED_TESTS }}"
+                      },
+                      {
+                        "type": "mrkdwn",
+                        "text": "*Skipped:*\n${{ env.SKIPPED_TESTS }}"
+                      }
+                    ]
+                  },
+                  {
+                    "type": "actions",
+                    "elements": [
+                      {
+                        "type": "button",
+                        "text": {
+                          "type": "plain_text",
+                          "text": "Ver Workflow en GitHub"
+                        },
+                        "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
+                        "style": "primary"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+EOF
+          )
+          # Pasamos el JSON como output para el siguiente paso
+          echo "slack_payload_json=$PAYLOAD_JSON" >> $GITHUB_OUTPUT
+
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          payload: |
-            {
-              "text": "${{ env.SLACK_MESSAGE }}"
-            }
+          # Usamos el output del paso anterior para el payload
+          payload: ${{ steps.prepare_slack_payload.outputs.slack_payload_json }}
         env:
-          SLACK_WEBHOOK_URL_COLOR: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Upload Cypress artifacts
         if: always() # Sube los artefactos siempre, o puedes cambiar a if: failure()
