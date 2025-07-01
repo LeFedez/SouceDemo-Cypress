@@ -49,19 +49,29 @@ jobs:
         if: always()
         run: |
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          # Determinar color del mensaje
           COLOR="#36a64f"
           if [ "${{ steps.test-summary.outputs.failed }}" -gt 0 ]; then
             COLOR="#ff4d4f"
           fi
 
-          MESSAGE="*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`\n📊 Total: ${{ steps.test-summary.outputs.total }}\n✅ Passed: ${{ steps.test-summary.outputs.passed }}\n❌ Failed: ${{ steps.test-summary.outputs.failed }}\n⚪️ Skipped: ${{ steps.test-summary.outputs.skipped }}\n📎 Reporte: (descargar desde _Artifacts_)\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-          MESSAGE_ESCAPED=$(echo "$MESSAGE" | sed ':a;N;$!ba;s/\n/\\n/g')
+          # Construir mensaje
+          MSG="*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`"
+          MSG="$MSG\n📊 Total: ${{ steps.test-summary.outputs.total }}"
+          MSG="$MSG\n✅ Passed: ${{ steps.test-summary.outputs.passed }}"
+          MSG="$MSG\n❌ Failed: ${{ steps.test-summary.outputs.failed }}"
+          MSG="$MSG\n⚪️ Skipped: ${{ steps.test-summary.outputs.skipped }}"
+          MSG="$MSG\n📎 Reporte: (descargar desde _Artifacts_)"
+          MSG="$MSG\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Escapar saltos de línea
+          MSG_ESCAPED=$(echo "$MSG" | sed ':a;N;$!ba;s/\n/\\n/g')
 
           echo "payload=$(jq -n \
             --arg color "$COLOR" \
-            --arg msg "$MESSAGE_ESCAPED" \
+            --arg msg "$MSG_ESCAPED" \
             '{
-              text: "",
               attachments: [
                 {
                   fallback: "Resultados de Pruebas Cypress",
