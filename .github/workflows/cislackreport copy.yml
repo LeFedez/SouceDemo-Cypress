@@ -1,0 +1,83 @@
+name: Cypress Tests and Slack Notification
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  cypress-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress tests with Mochawesome
+        run: |
+          npx cypress run --reporter mochawesome \
+                          --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
+        continue-on-error: true
+
+      - name: Extract test summary
+        if: always()
+        run: |
+          RESULTS_FILE="cypress/results/mochawesome.json"
+          if [ -f "$RESULTS_FILE" ]; then
+            PASSED=$(jq '.stats.passes' "$RESULTS_FILE")
+            FAILED=$(jq '.stats.failures' "$RESULTS_FILE")
+            SKIPPED=$(jq '.stats.skipped' "$RESULTS_FILE")
+            TOTAL=$(jq '.stats.tests' "$RESULTS_FILE")
+          else
+            PASSED=0
+            FAILED=0
+            SKIPPED=0
+            TOTAL=0
+          fi
+          echo "PASSED_TESTS=$PASSED" >> $GITHUB_ENV
+          echo "FAILED_TESTS=$FAILED" >> $GITHUB_ENV
+          echo "SKIPPED_TESTS=$SKIPPED" >> $GITHUB_ENV
+          echo "TOTAL_TESTS=$TOTAL" >> $GITHUB_ENV
+
+      - name: Compose Slack message and determine color
+        if: always()
+        run: |
+          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          if [ "$FAILED_TESTS" -gt 0 ]; then
+            COLOR="#ff4d4f"
+          else
+            COLOR="#36a64f"
+          fi
+
+          MESSAGE="*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \`${{ github.ref_name }}\`\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          # Escapamos saltos de línea y comillas
+          ESCAPED_MESSAGE=$(echo "$MESSAGE" | jq -Rs .)
+          echo "SLACK_MESSAGE=$ESCAPED_MESSAGE" >> $GITHUB_ENV
+          echo "SLACK_COLOR=$COLOR" >> $GITHUB_ENV
+
+      - name: Send Slack Notification
+        if: always()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "attachments": [
+                {
+                  "fallback": "Resultados de Pruebas Cypress",
+                  "color": "${{ env.SLACK_COLOR }}",
+                  "text": ${{ env.SLACK_MESSAGE }}
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
