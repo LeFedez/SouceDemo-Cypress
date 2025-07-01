@@ -115,10 +115,10 @@ jobs:
               }
             ]
           }
-EOF
-          )
-          # Pasamos el JSON como output para el siguiente paso
-          echo "slack_payload_json=$PAYLOAD_JSON" >> $GITHUB_OUTPUT
+            EOF
+          )  
+        # Pasamos el JSON como output para el siguiente paso
+        echo "slack_payload_json=$PAYLOAD_JSON" >> $GITHUB_OUTPUT
 
 
       - name: Send Slack Notification
