@@ -22,48 +22,119 @@ jobs:
         run: npm ci
 
       - name: Run Cypress tests with Mochawesome
-        uses: cypress-io/github-action@v6
-        with:
-          install-command: 'npm ci'
-          command: 'npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true'
+        run: |
+          npx cypress run --reporter mochawesome \
+                          --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true
         continue-on-error: true
 
-      - name: Extract test summary
+      - name: Extract test summary # Extrae los resultados de las pruebas
         if: always()
+        id: extract_summary_data # Renombrado para claridad
         run: |
           RESULTS_FILE="cypress/results/mochawesome.json"
-          if [ -f "$RESULTS_FILE" ]; then
-            echo "PASSED_TESTS=$(jq '.stats.passes' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "FAILED_TESTS=$(jq '.stats.failures' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "SKIPPED_TESTS=$(jq '.stats.skipped' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "TOTAL_TESTS=$(jq '.stats.tests' "$RESULTS_FILE")" >> "$GITHUB_ENV"
+          
+          # Verificar si el archivo de reporte existe
+          if [ ! -f "$RESULTS_FILE" ]; then
+            echo "ADVERTENCIA: El archivo de reporte '$RESULTS_FILE' no fue encontrado."
+            echo "total_tests=0" >> "$GITHUB_ENV"
+            echo "passed_tests=0" >> "$GITHUB_ENV"
+            echo "failed_tests=0" >> "$GITHUB_ENV"
+            echo "skipped_tests=0" >> "$GITHUB_ENV"
+            echo "duration_seconds=0" >> "$GITHUB_ENV"
           else
-            echo "No mochawesome.json found. Setting default values."
-            echo "PASSED_TESTS=0" >> "$GITHUB_ENV"
-            echo "FAILED_TESTS=0" >> "$GITHUB_ENV"
-            echo "SKIPPED_TESTS=0" >> "$GITHUB_ENV"
-            echo "TOTAL_TESTS=0" >> "$GITHUB_ENV"
+            # Extrae los valores usando jq y los guarda como variables de entorno de GitHub
+            echo "total_tests=$(jq '.stats.tests' "$RESULTS_FILE")" >> "$GITHUB_ENV"
+            echo "passed_tests=$(jq '.stats.passes' "$RESULTS_FILE")" >> "$GITHUB_ENV"
+            echo "failed_tests=$(jq '.stats.failures' "$RESULTS_FILE")" >> "$GITHUB_ENV"
+            echo "skipped_tests=$(jq '.stats.skipped' "$RESULTS_FILE")" >> "$GITHUB_ENV"
+            # Duración en milisegundos, la guardamos tal cual y la procesamos en el payload
+            echo "duration_seconds=$(jq '.stats.duration' "$RESULTS_FILE" | awk '{print int($1/1000)}') " >> "$GITHUB_ENV" 
+            # ^ Dividimos por 1000 y tomamos la parte entera directamente aquí
+          fi
+          
+          # Determina el color y texto de estado para el payload
+          if [ "${{ env.failed_tests }}" -gt 0 ]; then
+            echo "result_color=danger" >> "$GITHUB_ENV" # 'danger' para rojo
+            echo "status_text=🔴 *FALLA EN LAS PRUEBAS* 🔴" >> "$GITHUB_ENV"
+          else
+            echo "result_color=good" >> "$GITHUB_ENV" # 'good' para verde
+            echo "status_text=✅ *PRUEBAS EXITOSAS* ✅" >> "$GITHUB_ENV"
           fi
 
-      - name: Send Slack Notification with rtCamp Action
+          # Prepara el texto de duración
+          duration_val="${{ env.duration_seconds }}"
+          if [ "$duration_val" -ge 60 ]; then
+            minutes=$((duration_val / 60))
+            remaining_seconds=$((duration_val % 60))
+            if [ "$remaining_seconds" -eq 0 ]; then
+              echo "duration_display=$minutes minutos" >> "$GITHUB_ENV"
+            else
+              echo "duration_display=$minutes minutos y $remaining_seconds segundos" >> "$GITHUB_ENV"
+            fi
+          else
+            echo "duration_display=$duration_val segundos" >> "$GITHUB_ENV"
+          fi
+          
+          # Variables de contexto para el payload
+          echo "short_sha=$(echo \"${{ github.sha }}\" | cut -c1-7)" >> "$GITHUB_ENV"
+          echo "repo_base_url=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
+          echo "action_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_ENV"
+          echo "checks_url=${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}/checks" >> "$GITHUB_ENV"
+          echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_ENV"
+          echo "user_commit_username=${{ github.event.head_commit.committer.username }}" >> "$GITHUB_ENV"
+          echo "last_commit_message=${{ github.event.head_commit.message }}" >> "$GITHUB_ENV"
+
+
+      - name: Send Slack Notification
         if: always()
-        uses: rtCamp/action-slack-notify@v2 # Usamos esta acción
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          # AHORA: Todo el JSON es un string multi-línea directamente en YAML.
+          # NOTA: Todas las comillas dobles DENTRO del JSON deben ser escapadas (doble barra inversa \\").
+          # Esto es propenso a errores, ¡mucho cuidado con la sintaxis!
+          payload: |
+            {
+              "attachments": [
+                {
+                  "color": "${{ env.result_color }}",
+                  "author_name": "${{ env.user_commit_username }}",
+                  "author_link": "https://github.com/${{ env.user_commit_username }}",
+                  "author_icon": "https://github.com/${{ env.user_commit_username }}.png?size=32",
+                  "title": "${{ env.status_text }}",
+                  "title_link": "${{ env.action_url }}",
+                  "text": "*Resultados de Pruebas Cypress* para el commit \`${{ env.short_sha }}\` en la rama `${{ env.branch_name }}`\nWorkflow ejecutado por ${{ env.user_commit_username }} en el repositorio <${{ env.repo_base_url }}|${{ github.repository }}>",
+                  "fields": [
+                    { "title": "Mensaje Commit", "value": "${{ env.last_commit_message }}", "short": false },
+                    { "title": "Tests Totales", "value": "${{ env.total_tests }}", "short": true },
+                    { "title": "Tests Satisfactorios", "value": "${{ env.passed_tests }}", "short": true },
+                    { "title": "Tests Fallidos", "value": "${{ env.failed_tests }}", "short": true },
+                    { "title": "Tests Saltados", "value": "${{ env.skipped_tests }}", "short": true },
+                    { "title": "Duración", "value": "${{ env.duration_display }}", "short": true }
+                  ],
+                  "actions": [
+                    {
+                      "type": "button",
+                      "text": "Ver Ejecución en GitHub",
+                      "url": "${{ env.action_url }}"
+                    },
+                    {
+                      "type": "button",
+                      "text": "Ver Checks del Commit",
+                      "url": "${{ env.checks_url }}"
+                    },
+                    {
+                      "type": "button",
+                      "text": "Ir al Repositorio",
+                      "url": "${{ env.repo_base_url }}"
+                    }
+                  ],
+                  "footer": "GitHub Actions",
+                  "ts": ${{ github.run_started_at | split('T') | first | tojson }}
+                }
+              ]
+            }
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }} # Webhook de Slack
-          SLACK_USERNAME: 'Cypress CI' # Nombre de usuario del bot en Slack
-          SLACK_CHANNEL: '#tu-canal' # Opcional: Especifica el canal, si no lo tienes en el webhook
-          # Determina el color basado en si hay fallas
-          SLACK_COLOR: ${{ env.FAILED_TESTS > 0 && 'danger' || 'good' }} # 'danger' para rojo, 'good' para verde
-          # Construye el mensaje con los resultados y el enlace
-          SLACK_MESSAGE: |
-            *Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha | slice(0, 7) }}>` en la rama `${{ github.ref_name }}`
-            📊 Total: ${{ env.TOTAL_TESTS }}
-            ✅ Passed: ${{ env.PASSED_TESTS }}
-            ❌ Failed: ${{ env.FAILED_TESTS }}
-            ⚪️ Skipped: ${{ env.SKIPPED_TESTS }}
-            🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          SLACK_FOOTER: 'Powered by GitHub Actions' # Pie de página opcional
-          SLACK_ICON_EMOJI: ':cypress:' # Opcional: un emoji para el icono del bot
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Upload Cypress artifacts
         if: always()
