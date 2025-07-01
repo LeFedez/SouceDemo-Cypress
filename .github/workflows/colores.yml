@@ -49,7 +49,6 @@ jobs:
             echo "skipped_tests=$(jq '.stats.skipped' "$RESULTS_FILE")" >> "$GITHUB_ENV"
             # Duración en milisegundos, la guardamos tal cual y la procesamos en el payload
             echo "duration_seconds=$(jq '.stats.duration' "$RESULTS_FILE" | awk '{print int($1/1000)}') " >> "$GITHUB_ENV" 
-            # ^ Dividimos por 1000 y tomamos la parte entera directamente aquí
           fi
           
           # Determina el color y texto de estado para el payload
@@ -83,15 +82,17 @@ jobs:
           echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_ENV"
           echo "user_commit_username=${{ github.event.head_commit.committer.username }}" >> "$GITHUB_ENV"
           echo "last_commit_message=${{ github.event.head_commit.message }}" >> "$GITHUB_ENV"
+          
+          # Calcular UNIX timestamp para Slack 'ts'
+          echo "current_unix_timestamp=$(date +%s)" >> "$GITHUB_ENV"
 
 
       - name: Send Slack Notification
         if: always()
         uses: slackapi/slack-github-action@v1.24.0
         with:
-          # AHORA: Todo el JSON es un string multi-línea directamente en YAML.
-          # NOTA: Todas las comillas dobles DENTRO del JSON deben ser escapadas (doble barra inversa \\").
-          # Esto es propenso a errores, ¡mucho cuidado con la sintaxis!
+          # Todo el JSON es un string multi-línea directamente en YAML.
+          # Todas las comillas dobles DENTRO del JSON deben ser escapadas (doble barra inversa \\").
           payload: |
             {
               "attachments": [
@@ -129,12 +130,12 @@ jobs:
                     }
                   ],
                   "footer": "GitHub Actions",
-                  "ts": ${{ github.run_started_at | split('T') | first | tojson }}
+                  "ts": ${{ env.current_unix_timestamp }}
                 }
               ]
             }
         env:
-          SLACK_WEBHOOK_URL_COLOR: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
       - name: Upload Cypress artifacts
         if: always()
