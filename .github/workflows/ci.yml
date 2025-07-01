@@ -12,7 +12,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'      
+          node-version: '18'       
 
       - name: Install dependencies
         run: npm ci
@@ -39,12 +39,13 @@ jobs:
           SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
           SLACK_USERNAME: CyNotification
           SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
-          SLACK_MESSAGE: "*Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}>` en la rama `${{ github.ref_name }}`
+          SLACK_MESSAGE: | # Cambiado a bloque multi-línea para facilitar el salto de línea
+            *Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}>` en la rama `${{ github.ref_name }}`
+            
             📊 Total: ${{ env.TOTAL_TESTS }}
             ✅ Passed: ${{ env.PASSED_TESTS }}
             ❌ Failed: ${{ env.FAILED_TESTS }}
             ⚪️ Skipped: ${{ env.SKIPPED_TESTS }}
-            🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Cypress Web Test
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}  
-          
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
