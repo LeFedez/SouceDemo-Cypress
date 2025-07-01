@@ -23,6 +23,15 @@ jobs:
           name: Mochawesome HTML Report
           path: cypress/reports/html   
 
+      - name: Extract test summary
+        if: always()
+        run: |
+          RESULTS_FILE="cypress/results/mochawesome.json"
+          echo "PASSED_TESTS=$(jq '.stats.passes' $RESULTS_FILE)" >> $GITHUB_ENV
+          echo "FAILED_TESTS=$(jq '.stats.failures' $RESULTS_FILE)" >> $GITHUB_ENV
+          echo "SKIPPED_TESTS=$(jq '.stats.skipped' $RESULTS_FILE)" >> $GITHUB_ENV
+          echo "TOTAL_TESTS=$(jq '.stats.tests' $RESULTS_FILE)" >> $GITHUB_ENV
+
       - name: Slack Notification
         if: always()
         uses: rtCamp/action-slack-notify@v2
