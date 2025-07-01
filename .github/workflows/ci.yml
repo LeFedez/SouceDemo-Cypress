@@ -40,7 +40,7 @@ jobs:
           SLACK_USERNAME: CyNotification
           SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
           SLACK_MESSAGE: "*Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}>` en la rama `${{ github.ref_name }}`
-            📊 Total: ${{ env.TOTAL_TESTS }}
+            \n📊 Total: ${{ env.TOTAL_TESTS }}
             ✅ Passed: ${{ env.PASSED_TESTS }}
             ❌ Failed: ${{ env.FAILED_TESTS }}
             ⚪️ Skipped: ${{ env.SKIPPED_TESTS }}
