@@ -134,7 +134,7 @@ jobs:
               ]
             }
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL_COLOR: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }}
 
       - name: Upload Cypress artifacts
         if: always()
