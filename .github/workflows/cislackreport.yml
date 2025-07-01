@@ -45,7 +45,6 @@ jobs:
       - name: Compose Slack message
         if: always()
         run: |
-          SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           echo "SLACK_MESSAGE=*Resultados de Pruebas Cypress* para el commit ${SHORT_SHA} en la rama \${{ github.ref_name }}\\n📊 Total: ${TOTAL_TESTS}\n✅ Passed: ${PASSED_TESTS}\n❌ Failed: ${FAILED_TESTS}\n⚪️ Skipped: ${SKIPPED_TESTS}\n/artifacts|Descargar reporte Mochawesome HTML>\n🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_ENV
 
       - name: Send Slack Notification
