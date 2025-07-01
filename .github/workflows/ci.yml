@@ -10,10 +10,11 @@ jobs:
       # Install npm dependencies, cache them correctly
       # and run all Cypress tests
 
-      - name: Cypress run
-        uses: cypress-io/github-action@v5
-        with:
-         command: npx cypress run  
+      - name: Run Cypress tests with Mochawesome
+        run: |
+          npx cypress run --reporter mochawesome \
+                          --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true
+        continue-on-error: true
 
       - name: Cypress Test Report
         if: always()
@@ -29,7 +30,13 @@ jobs:
           SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
           SLACK_USERNAME: CyNotification
           SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
-          SLACK_MESSAGE: 'Test Automation Report'
+          SLACK_MESSAGE: |
+            *Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha | slice(0, 7) }}>` en la rama `${{ github.ref_name }}`
+            📊 Total: ${{ env.TOTAL_TESTS }}
+            ✅ Passed: ${{ env.PASSED_TESTS }}
+            ❌ Failed: ${{ env.FAILED_TESTS }}
+            ⚪️ Skipped: ${{ env.SKIPPED_TESTS }}
+            🔗 Ver workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           SLACK_TITLE: Cypress Web Test
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}  
           
