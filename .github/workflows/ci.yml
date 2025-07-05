@@ -57,7 +57,7 @@ jobs:
         env:
           SLACK_COLOR: ${{ env.SLACK_DYNAMIC_COLOR }} # Use the dynamically calculated color
           SLACK_USERNAME: CyBot
-          SLACK_ICON: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
+          SLACK_ICON: https://drive.google.com/drive/u/0/folders/13It96b6W_F1uaPMpFqfMYR7zKfEpyEfe #https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
           SLACK_MESSAGE: | # Multi-line block for desired formatting
             *Resultados de Pruebas Cypress* para el commit `<https://github.com/${{ github.repository }}/commit/${{ github.sha }}>` en la rama `${{ github.ref_name }}`
             
