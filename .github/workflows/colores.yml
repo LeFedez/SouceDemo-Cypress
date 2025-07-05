@@ -1,123 +1,19 @@
 name: Cypress Tests and Slack Notification
 
-on:
-  push:
-    branches:
-      - main
-  # Puedes añadir un schedule si lo necesitas, como en tu ejemplo anterior
-  # schedule:
-  #   - cron: "00 14 * * 1,2,3,4,5" # Lunes a Viernes 14:00 UTC
+on: [push]
 
 jobs:
-  cypress-run:
+  test-and-upload-results:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v2
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: 'Run tests'
+        uses: cypress-io/github-action@v2
+
+      - name: 'Upload screenshots and videos to Slack'
+        uses: ngocsangyem/cypress-notify
         with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Run Cypress tests with Mochawesome
-        run: |
-          npx cypress run --reporter mochawesome \
-                          --reporter-options reportDir=cypress/results,overwrite=false,html=false,json=true
-        continue-on-error: true
-
-      - name: Extract test summary # Extrae los resultados de las pruebas
-        if: always()
-        id: extract_summary_data
-        run: |
-          RESULTS_FILE="cypress/results/mochawesome.json" # Asegúrate de que esta ruta es correcta para tu setup de Mochawesome
-          
-          # Verificar si el archivo de reporte existe
-          if [ ! -f "$RESULTS_FILE" ]; then
-            echo "ADVERTENCIA: El archivo de reporte '$RESULTS_FILE' no fue encontrado."
-            echo "total_tests=0" >> "$GITHUB_ENV"
-            echo "passed_tests=0" >> "$GITHUB_ENV"
-            echo "failed_tests=0" >> "$GITHUB_ENV"
-            echo "skipped_tests=0" >> "$GITHUB_ENV"
-            echo "duration_seconds=0" >> "$GITHUB_ENV"
-          else
-            echo "total_tests=$(jq '.stats.tests' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "passed_tests=$(jq '.stats.passes' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "failed_tests=$(jq '.stats.failures' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "skipped_tests=$(jq '.stats.skipped' "$RESULTS_FILE")" >> "$GITHUB_ENV"
-            echo "duration_seconds=$(jq '.stats.duration' "$RESULTS_FILE" | awk '{print int($1/1000)}') " >> "$GITHUB_ENV" 
-          fi
-          
-          # Determina el color de la notificación para RtCamp/action-slack-notify
-          if [ "${{ env.failed_tests }}" -gt 0 ]; then
-            echo "slack_notification_color=danger" >> "$GITHUB_ENV" # 'danger' para rojo
-            echo "slack_status_emoji=🔴" >> "$GITHUB_ENV"
-            echo "slack_status_text=FALLA EN LAS PRUEBAS" >> "$GITHUB_ENV"
-          else
-            echo "slack_notification_color=good" >> "$GITHUB_ENV" # 'good' para verde
-            echo "slack_status_emoji=✅" >> "$GITHUB_ENV"
-            echo "slack_status_text=PRUEBAS EXITOSAS" >> "$GITHUB_ENV"
-          fi
-
-          # Prepara el texto de duración
-          duration_val="${{ env.duration_seconds }}"
-          if [ "$duration_val" -ge 60 ]; then
-            minutes=$((duration_val / 60))
-            remaining_seconds=$((duration_val % 60))
-            if [ "$remaining_seconds" -eq 0 ]; then
-              echo "duration_display=$minutes minutos" >> "$GITHUB_ENV"
-            else
-              echo "duration_display=$minutes minutos y $remaining_seconds segundos" >> "$GITHUB_ENV"
-            fi
-          else
-            echo "duration_display=$duration_val segundos" >> "$GITHUB_ENV"
-          fi
-          
-          # Variables de contexto para el mensaje de Slack
-          echo "short_sha=$(echo \"${{ github.sha }}\" | cut -c1-7)" >> "$GITHUB_ENV"
-          echo "repo_base_url=https://github.com/${{ github.repository }}" >> "$GITHUB_ENV"
-          echo "action_run_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> "$GITHUB_ENV"
-          echo "branch_name=${GITHUB_REF#refs/heads/}" >> "$GITHUB_ENV"
-          echo "user_commit_username=${{ github.event.head_commit.committer.username }}" >> "$GITHUB_ENV"
-          echo "last_commit_message=${{ github.event.head_commit.message }}" >> "$GITHUB_ENV"
-
-
-      - name: Send Slack Notification with RtCamp Action
-        if: always()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_USERNAME: 'Cypress CI Report'
-          SLACK_CHANNEL: '#tu-canal-de-slack' # <<--- ¡IMPORTANTE! Reemplaza con tu canal de Slack.
-          SLACK_COLOR: ${{ env.slack_notification_color }}
-          SLACK_TITLE: "${{ env.slack_status_emoji }} ${{ env.slack_status_text }}" # Título más conciso
-          SLACK_MESSAGE: | # Un mensaje multi-línea fácil de leer con saltos de línea explícitos
-            *Resultados de Pruebas Cypress* para el commit `<${{ env.repo_base_url }}/commit/${{ github.sha }}|${{ env.short_sha }}>` en la rama `${{ env.branch_name }}`
-            
-            *📊 Total:* ${{ env.total_tests }}
-            *✅ Pasadas:* ${{ env.passed_tests }}
-            *❌ Fallidas:* ${{ env.failed_tests }}
-            *⚪️ Saltadas:* ${{ env.skipped_tests }}
-            *⏱️ Duración:* ${{ env.duration_display }}
-            
-            *Workflow:* <${{ env.action_run_url }}|Ver ejecución en GitHub>
-            *Repositorio:* <${{ env.repo_base_url }}|${{ github.repository }}>
-            *Último Commit por:* ${{ env.user_commit_username }}
-            *Mensaje Commit:* ${{ env.last_commit_message }}
-          SLACK_FOOTER: 'Powered by GitHub Actions'
-          SLACK_ICON_EMOJI: ':cypress:' # Opcional, si tienes un emoji de Cypress
-
-      - name: Upload Cypress artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cypress-results
-          path: |
-            cypress/videos/
-            cypress/screenshots/
-            cypress/results/mochawesome.json
-          retention-days: 5
+          token: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }}
+          channels: 'engineering-ops'
