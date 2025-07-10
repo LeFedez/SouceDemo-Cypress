@@ -9,9 +9,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
       - name: Cypress to Slack
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.4
         with:
