@@ -24,9 +24,7 @@ jobs:
         run: npx cypress install
 
       - name: Run Cypress tests with Mochawesome
-        run: |
-          npx cypress run --reporter mochawesome \
-                          --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
+        run: npx cypress run
 
       - name: Cypress to Slack
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.3
