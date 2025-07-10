@@ -14,7 +14,7 @@ module.exports = defineConfig({
     reportDir: 'cypress/results',
     overwrite: false,
     html: true,
-    json: true,
+    json: false,
     charts: true,
     embeddedScreenshots: true,
     inlineAssets: true,
