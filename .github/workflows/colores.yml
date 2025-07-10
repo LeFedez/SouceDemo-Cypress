@@ -11,3 +11,5 @@ jobs:
 
       - name: Cypress Tests Slack Notification
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.3
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
