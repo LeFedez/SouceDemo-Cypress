@@ -6,14 +6,21 @@ jobs:
   test-and-upload-results:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: 'Run tests'
-        uses: cypress-io/github-action@v2
-
-      - name: 'Upload screenshots and videos to Slack'
-        uses: ngocsangyem/cypress-notify
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          token: ${{ secrets.SLACK_WEBHOOK_URL_COLOR }}
-          channels: 'engineering-ops'
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Cypress tests
+        run: npx cypress run
+
+      - name: Cypress Tests Slack Notification
+        uses: LeFedez/cypress-e2e-slack-reporter@v1.0.2 
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
