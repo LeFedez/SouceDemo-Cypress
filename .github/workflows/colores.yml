@@ -15,7 +15,6 @@ jobs:
           node-version: 18
           cypress-command: npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
           slack-username: CyBoty
-          slack-icon: https://drive.google.com/drive/u/0/folders/13It96b6W_F1uaPMpFqfMYR7zKfEpyEfe
           slack-title: "*Cypress E2E Test Results*"
           continue-on-cypress-error: true
           slack-webhook: ${{ secrets.SLACK_WEBHOOK }}
