@@ -13,4 +13,3 @@ jobs:
         uses: LeFedez/cypress-e2e-slack-reporter@v1.1.1
         with:
           slack-webhook: ${{ secrets.SLACK_WEBHOOK }}
-
