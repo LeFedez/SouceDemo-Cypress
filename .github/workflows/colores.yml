@@ -23,7 +23,7 @@ jobs:
       - name: Install Cypress binary
         run: npx cypress install
 
-       - name: Run Cypress tests with Mochawesome
+      - name: Run Cypress tests with Mochawesome
         run: |
           npx cypress run --reporter mochawesome \
                           --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
