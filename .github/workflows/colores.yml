@@ -20,14 +20,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Cypress binary
+        run: npx cypress install
+
       - name: Run Cypress tests with Mochawesome
-        run: npx cypress run
+        run: |
+          npx cypress run --reporter mochawesome \
+                          --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
 
       - name: Cypress to Slack
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.3
         with:
           node-version: 18
-          cypress-command: npx cypress run
+          cypress-command: npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
           slack-username: CyBot
           slack-icon: https://pbs.twimg.com/profile_images/1512090708181725184/KAPAXmDg_400x400.jpg
           slack-title: "*Cypress E2E Test Results*"
