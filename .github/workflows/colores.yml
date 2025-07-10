@@ -6,5 +6,7 @@ jobs:
   test-and-upload-results:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
       - name: Cypress Tests Slack Notification
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.2
