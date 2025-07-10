@@ -17,11 +17,16 @@ jobs:
         with:
           node-version: 18
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Install Cypress binary
         run: npx cypress install
 
-      - name: Run Cypress tests
-        run: npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
+       - name: Run Cypress tests with Mochawesome
+        run: |
+          npx cypress run --reporter mochawesome \
+                          --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
 
       - name: Cypress to Slack
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.3
@@ -34,4 +39,5 @@ jobs:
           continue-on-cypress-error: true
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
 
