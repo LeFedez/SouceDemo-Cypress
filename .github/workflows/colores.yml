@@ -13,7 +13,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Cypress to Slack
-        uses: LeFedez/cypress-e2e-slack-reporter@v1.0.3
+        uses: LeFedez/cypress-e2e-slack-reporter@v1.0.4
         with:
           node-version: 18
           cypress-command: npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
