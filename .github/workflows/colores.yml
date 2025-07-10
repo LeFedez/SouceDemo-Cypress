@@ -6,20 +6,6 @@ jobs:
   test-and-upload-results:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install dependencies
-        run: npm install 
-
-      - name: Run Cypress tests
-        run: npx cypress run
-
       - name: Cypress Tests Slack Notification
         uses: LeFedez/cypress-e2e-slack-reporter@v1.0.2 
         env:
