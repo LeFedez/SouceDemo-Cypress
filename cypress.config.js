@@ -1,16 +1,24 @@
 const { defineConfig } = require("cypress");
+const mochawesome = require("cypress-mochawesome-reporter/plugin");
 
 module.exports = defineConfig({
-  reporter: 'cypress-mochawesome-reporter',
-  video: true,
-  screenshotsFolder: 'images',
-  reporterOptions: {
-    videoOnFailOnly: false
-  },
   e2e: {
     setupNodeEvents(on, config) {
-      require('cypress-mochawesome-reporter/plugin')(on);
+      mochawesome(on); // 👈 importante para activar el plugin
+      return config;
     },
-    baseUrl : 'https://www.saucedemo.com/v1/',
   },
+  reporter: "cypress-mochawesome-reporter",
+  reporterOptions: {
+    reportDir: "cypress/results",
+    overwrite: false,
+    html: true,
+    json: true,
+    charts: true,
+    embeddedScreenshots: true,
+    inlineAssets: true,
+    reportPageTitle: "Test Report",
+    saveJson: true,
+  },
+  baseUrl : 'https://www.saucedemo.com/v1/',
 });
