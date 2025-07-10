@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: 18
           cypress-command: npx cypress run --reporter mochawesome --reporter-options reportDir=cypress/results,overwrite=false,html=true,json=true
-          slack-username: CyBell
+          slack-username: Cy-Notify
           slack-icon: https://cdn.sanity.io/images/o0o2tn5x/production/13b9c8412093e2f0cdb5495e1f59144967fa1664-512x512.jpg
           slack-title: "*Cypress E2E Test Results*"
           continue-on-cypress-error: true
